@@ -1,0 +1,314 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<title>InsideSCL Drawing Challenges</title>
+
+<style>
+    body {
+      font-family: Arial, sans-serif;
+      background: #f9f9f9;
+      margin: 0;
+      padding: 0;
+    }
+
+    /* ------------------------------
+       JOOMAG POPUP CONTAINER
+    ------------------------------ */
+    .popup-container {
+      width: 95%;
+      max-width: 900px;
+      margin: 0 auto;
+      padding: 20px;
+      box-sizing: border-box;
+    }
+
+    header {
+      background: #043657;
+      color: white;
+      padding: 20px;
+      text-align: center;
+      border-radius: 6px;
+    }
+
+    nav {
+      display: flex;
+      justify-content: center;
+      background: #e6eaee;
+      padding: 10px;
+      margin-top: 15px;
+      flex-wrap: wrap;
+      border-radius: 6px;
+    }
+
+    nav button {
+      background: #1FADC5;
+      border: none;
+      padding: 10px 20px;
+      margin: 5px;
+      cursor: pointer;
+      font-weight: bold;
+      border-radius: 5px;
+    }
+
+    nav button.active {
+      background: #0d6ba8;
+      color: white;
+    }
+
+    .challenge {
+      display: none;
+      padding: 20px 0;
+      text-align: center;
+    }
+
+    .challenge.active {
+      display: block;
+    }
+
+    #palette {
+      margin: 10px auto;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+      justify-content: center;
+      max-width: 400px;
+    }
+
+    .swatch {
+      width: 24px;
+      height: 24px;
+      border-radius: 4px;
+      border: 2px solid #333;
+      cursor: pointer;
+    }
+
+    .tools {
+      margin: 10px;
+    }
+
+    canvas {
+      border: 2px solid #ccc;
+      cursor: crosshair;
+      display: block;
+      margin: 0 auto;
+      max-width: 100%;
+      height: auto;
+    }
+</style>
+</head>
+
+<body>
+
+<div class="popup-container">
+
+<header>
+  <h1>InsideSCL Drawing Challenges</h1>
+  <p>Draw the items below with the updated ODU color palette.</p>
+</header>
+
+<nav>
+  <button class="active" onclick="showChallenge(0)">Crown</button>
+  <button onclick="showChallenge(1)">Big Blue Mascot</button>
+  <button onclick="showChallenge(2)">Campus Landmark</button>
+</nav>
+
+<div id="challenges">
+
+<!-- Challenge 1 -->
+<div class="challenge active">
+<h2>🎨 Challenge 1: Draw Your Crown</h2>
+<canvas width="800" height="800"></canvas>
+
+<div id="palette"></div>
+
+<div class="tools">
+  <label>Brush Size:
+    <input id="brushSize" type="range" min="5" max="50" value="20">
+  </label>
+  <button onclick="setTool('brush')">Brush</button>
+  <button onclick="setTool('eraser')">Eraser</button>
+  <button onclick="clearCanvas()">Clear</button>
+  <button onclick="downloadCanvas()">Download PNG</button>
+</div>
+</div>
+
+<!-- Challenge 2 -->
+<div class="challenge">
+<h2>🦁 Challenge 2: Draw Big Blue Mascot</h2>
+<canvas width="800" height="800"></canvas>
+
+<div id="palette"></div>
+
+<div class="tools">
+  <label>Brush Size:
+    <input id="brushSize" type="range" min="5" max="50" value="20">
+  </label>
+  <button onclick="setTool('brush')">Brush</button>
+  <button onclick="setTool('eraser')">Eraser</button>
+  <button onclick="clearCanvas()">Clear</button>
+  <button onclick="downloadCanvas()">Download PNG</button>
+</div>
+</div>
+
+<!-- Challenge 3 -->
+<div class="challenge">
+<h2>🏛️ Challenge 3: Draw a Landmark</h2>
+<canvas width="800" height="800"></canvas>
+
+<div id="palette"></div>
+
+<div class="tools">
+  <label>Brush Size:
+    <input id="brushSize" type="range" min="5" max="50" value="20">
+  </label>
+  <button onclick="setTool('brush')">Brush</button>
+  <button onclick="setTool('eraser')">Eraser</button>
+  <button onclick="clearCanvas()">Clear</button>
+  <button onclick="downloadCanvas()">Download PNG</button>
+</div>
+</div>
+
+</div><!-- end challenges -->
+
+</div><!-- end popup container -->
+
+<script>
+/* --- Color Palette --- */
+const colors = [
+  "#043657", "#828a8f", "#98C5EA", "#6795b8", "#0d6ba8", "#1C4BFF",
+  "#B0F1FA", "#1FADC5", "#00F1FF", "#BFAB93", "#E5D1B5", "#F8EDE4",
+  "#BAC4CD", "#E6EAEE"
+];
+
+let selectedColor = colors[0];
+let tool = "brush";
+let brushSize = 20;
+
+let currentCanvas, ctx;
+let painting = false;
+
+/* ------------------------------
+   Accurate Mouse Position Fix
+------------------------------- */
+function getMousePos(e) {
+  const rect = currentCanvas.getBoundingClientRect();
+  const scaleX = currentCanvas.width / rect.width;
+  const scaleY = currentCanvas.height / rect.height;
+
+  return {
+    x: (e.clientX - rect.left) * scaleX,
+    y: (e.clientY - rect.top) * scaleY
+  };
+}
+
+/* --- Navigation --- */
+function showChallenge(index) {
+  document.querySelectorAll(".challenge").forEach((c, i) => {
+    c.classList.toggle("active", i === index);
+  });
+
+  document.querySelectorAll("nav button").forEach((b, i) => {
+    b.classList.toggle("active", i === index);
+  });
+
+  setupCanvas();
+}
+
+/* --- Palette Setup --- */
+function setupPalette() {
+  document.querySelectorAll("#palette").forEach(palette => {
+    palette.innerHTML = "";
+
+    colors.forEach(c => {
+      const swatch = document.createElement("div");
+      swatch.className = "swatch";
+      swatch.style.backgroundColor = c;
+
+      swatch.addEventListener("click", () => {
+        selectedColor = c;
+        document.querySelectorAll(".swatch").forEach(s => s.style.outline = "");
+        swatch.style.outline = "3px solid black";
+      });
+
+      palette.appendChild(swatch);
+    });
+
+    palette.firstChild.style.outline = "3px solid black";
+  });
+}
+
+/* --- Canvas Setup --- */
+function setupCanvas() {
+  currentCanvas = document.querySelector(".challenge.active canvas");
+  ctx = currentCanvas.getContext("2d");
+  ctx.lineCap = "round";
+  ctx.lineJoin = "round";
+
+  currentCanvas.onmousedown = startPaint;
+  currentCanvas.onmousemove = paint;
+  currentCanvas.onmouseup = stopPaint;
+  currentCanvas.onmouseleave = stopPaint;
+}
+
+/* --- Painting --- */
+function startPaint(e) {
+  painting = true;
+  ctx.beginPath();
+
+  const pos = getMousePos(e);
+  ctx.moveTo(pos.x, pos.y);
+}
+
+function paint(e) {
+  if (!painting) return;
+
+  ctx.lineWidth = brushSize;
+
+  if (tool === "brush") {
+    ctx.globalCompositeOperation = "source-over";
+    ctx.strokeStyle = selectedColor;
+  } else {
+    ctx.globalCompositeOperation = "destination-out";
+  }
+
+  const pos = getMousePos(e);
+  ctx.lineTo(pos.x, pos.y);
+  ctx.stroke();
+}
+
+function stopPaint() {
+  painting = false;
+  ctx.closePath();
+}
+
+/* --- Tool Controls --- */
+function setTool(t) {
+  tool = t;
+  ctx.globalCompositeOperation = "source-over";
+}
+
+/* --- Other Tools --- */
+function clearCanvas() {
+  ctx.clearRect(0, 0, currentCanvas.width, currentCanvas.height);
+}
+
+function downloadCanvas() {
+  const link = document.createElement("a");
+  link.download = "drawing.png";
+  link.href = currentCanvas.toDataURL("image/png");
+  link.click();
+}
+
+/* Brush Size Listener */
+document.getElementById("brushSize").addEventListener("input", function () {
+  brushSize = parseInt(this.value);
+});
+
+/* Init Everything */
+setupPalette();
+setupCanvas();
+</script>
+
+</body>
+</html>
